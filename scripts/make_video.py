@@ -68,6 +68,8 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
     """
     n = len(scenes)
     durations = [get_duration(s["audio"]) for s in scenes]
+    # The intended final length (scenes overlap by CROSSFADE each transition).
+    total = sum(durations) - (n - 1) * CROSSFADE
 
     cmd = ["ffmpeg", "-y"]
     # Image inputs first (0 .. n-1)
@@ -124,7 +126,7 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
         filters.append(
             f"[{last_v}][spr]overlay=x=0:"
             f"y='-(mod(t*{SPARKLE_SPEED},{HEIGHT}))':"
-            f"format=yuv420[outv]"
+            f"format=yuv420:shortest=1[outv]"
         )
         last_v = "outv"
 
@@ -144,7 +146,6 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
     # 3b) Mix soft background music under the narration (fade in + fade out)
     final_a = last_a
     if music_idx is not None:
-        total = sum(durations) - (n - 1) * CROSSFADE
         fade_out_start = max(total - 3.0, 0.0)
         filters.append(
             f"[{music_idx}:a]volume={MUSIC_VOLUME},afade=t=in:st=0:d=2[bg]"
@@ -166,6 +167,10 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast",
         "-c:a", "aac", "-b:a", "192k",
         "-movflags", "+faststart",
+        # SAFETY: stop at the intended length no matter what the audio does.
+        # Without this, a looped music track makes FFmpeg pad the video forever.
+        "-t", f"{total:.3f}",
+        "-shortest",
         out_path,
     ]
 
