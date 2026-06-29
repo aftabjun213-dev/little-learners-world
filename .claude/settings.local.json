@@ -11,7 +11,13 @@
       "PowerShell(gh --version 2>&1)",
       "PowerShell(gh auth status 2>&1)",
       "Bash(python -c \"import ast; ast.parse\\(open\\('scripts/make_video.py',encoding='utf-8'\\).read\\(\\)\\); print\\('make_video.py syntax OK'\\)\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(python -c \"import ast,glob; [ast.parse\\(open\\(f,encoding='utf-8'\\).read\\(\\)\\) for f in glob.glob\\('scripts/*.py'\\)]; print\\('Syntax OK'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python -m pip install --quiet Pillow)"
     ]
   }
 }

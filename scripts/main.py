@@ -23,7 +23,9 @@ from generate_audio import generate_audio
 from generate_images import generate_image
 from make_video import build_video
 from music_picker import pick_music
+from effects import make_sparkle_overlay
 from upload_youtube import upload_video
+from config import WIDTH, HEIGHT
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 TOPICS_FILE = os.path.join(ROOT, "topics.json")
@@ -75,13 +77,16 @@ def main():
         generate_image(scene["image_prompt"], image_path, seed=base_seed + i)
         media.append({"image": image_path, "audio": audio_path})
 
-    # 4. Build the video (with soft background music)
+    # 4. Build the video (with soft music + floating sparkles)
     print("Building the video with FFmpeg (this takes a few minutes)...")
     music_path, music_credit = pick_music()
     if music_path:
         print(f"Background music: {os.path.basename(music_path)}")
+    sparkle_path = os.path.join(OUTPUT_DIR, "sparkles.png")
+    make_sparkle_overlay(WIDTH, HEIGHT, sparkle_path)
     video_path = os.path.join(OUTPUT_DIR, "final.mp4")
-    build_video(media, video_path, music_path=music_path)
+    build_video(media, video_path, music_path=music_path,
+                sparkle_path=sparkle_path)
 
     # 5. Upload to YouTube
     publish_at = next_publish_time()

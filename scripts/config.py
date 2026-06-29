@@ -32,7 +32,7 @@ SECONDS_PER_SCENE = 20   # rough target narration length per scene
 
 # ----- Background music -----
 MUSIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "music")
-MUSIC_VOLUME = 0.14      # how loud the music is under the voice (0.0 - 1.0)
+MUSIC_VOLUME = 0.23      # how loud the music is under the voice (0.0 - 1.0)
 
 # ----- Publishing -----
 # Your local timezone, used to schedule the 8am publish time.
