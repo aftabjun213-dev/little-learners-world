@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ffmpeg -version)",
+      "Bash(python -c \"import ast,glob; [ast.parse\\(open\\(f,encoding='utf-8'\\).read\\(\\)\\) for f in glob.glob\\('scripts/*.py'\\)]; print\\('All scripts: syntax OK'\\)\")",
+      "Bash(py -c \"import ast,glob; [ast.parse\\(open\\(f,encoding='utf-8'\\).read\\(\\)\\) for f in glob.glob\\('scripts/*.py'\\)]; print\\('All scripts: syntax OK'\\)\")",
+      "Bash(python -c \"import json; json.load\\(open\\('topics.json'\\)\\); print\\('topics.json valid,', len\\(json.load\\(open\\('topics.json'\\)\\)\\), 'episodes'\\)\")",
+      "Bash(py -c \"import json; print\\('topics.json valid,', len\\(json.load\\(open\\('topics.json'\\)\\)\\), 'episodes'\\)\")",
+      "PowerShell(git config --global user.name)",
+      "PowerShell(git config --global user.email)"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+name: Daily Kids Video
+
+on:
+  schedule:
+    # Runs every night at 02:00 UTC. (You can change this time.)
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}   # lets you also run it manually with one click
+
+permissions:
+  contents: write          # needed to save progress (state.json) back to the repo
+
+jobs:
+  make-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Make and upload today's video
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          TIMEZONE: ${{ vars.TIMEZONE }}
+        run: python scripts/main.py
+
+      - name: Save progress (which episode is next)
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add state.json
+          git commit -m "Advance to next episode [skip ci]" || echo "No change to commit"
+          git push
