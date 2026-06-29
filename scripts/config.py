@@ -33,8 +33,8 @@ SCENE_COUNT = 6          # how many scenes (images) per video
 # Your local timezone, used to schedule the 8am publish time.
 # Examples: "America/New_York", "America/Los_Angeles",
 #           "Europe/London", "Asia/Seoul", "Asia/Kolkata"
-TIMEZONE = os.environ.get("TIMEZONE", "America/Los_Angeles")
-PUBLISH_HOUR = int(os.environ.get("PUBLISH_HOUR", "8"))   # 8 = 8am
+TIMEZONE = os.environ.get("TIMEZONE") or "America/Los_Angeles"
+PUBLISH_HOUR = int(os.environ.get("PUBLISH_HOUR") or "8")   # 8 = 8am
 
 # Where temporary files are written
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
