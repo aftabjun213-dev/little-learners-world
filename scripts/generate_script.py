@@ -58,7 +58,7 @@ def _extract_json(text):
 
 
 def generate_script(topic_title, concept, scene_count=SCENE_COUNT):
-    client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"].strip())
     prompt = _build_prompt(topic_title, concept, scene_count)
 
     resp = client.messages.create(
