@@ -22,6 +22,7 @@ from generate_script import generate_script
 from generate_audio import generate_audio
 from generate_images import generate_image
 from make_video import build_video
+from music_picker import pick_music
 from upload_youtube import upload_video
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -74,10 +75,13 @@ def main():
         generate_image(scene["image_prompt"], image_path, seed=base_seed + i)
         media.append({"image": image_path, "audio": audio_path})
 
-    # 4. Build the video
+    # 4. Build the video (with soft background music)
     print("Building the video with FFmpeg (this takes a few minutes)...")
+    music_path, music_credit = pick_music()
+    if music_path:
+        print(f"Background music: {os.path.basename(music_path)}")
     video_path = os.path.join(OUTPUT_DIR, "final.mp4")
-    build_video(media, video_path)
+    build_video(media, video_path, music_path=music_path)
 
     # 5. Upload to YouTube
     publish_at = next_publish_time()
@@ -88,6 +92,8 @@ def main():
         f"Welcome to {CHANNEL_NAME} - fun, gentle learning for little kids!\n"
         f"#kids #learning #cartoon #preschool"
     )
+    if music_credit:
+        description += f"\n\n---\n{music_credit}"
     thumbnail = media[0]["image"]  # use the first scene image as thumbnail
     upload_video(
         video_path, title, description, script["tags"], publish_at,

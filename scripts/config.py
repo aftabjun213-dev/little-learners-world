@@ -27,7 +27,12 @@ WIDTH = 1280
 HEIGHT = 720
 FPS = 25
 CROSSFADE = 0.6          # seconds of crossfade between scenes
-SCENE_COUNT = 6          # how many scenes (images) per video
+SCENE_COUNT = 16         # how many scenes (images) per video (~5-6 min total)
+SECONDS_PER_SCENE = 20   # rough target narration length per scene
+
+# ----- Background music -----
+MUSIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "music")
+MUSIC_VOLUME = 0.14      # how loud the music is under the voice (0.0 - 1.0)
 
 # ----- Publishing -----
 # Your local timezone, used to schedule the 8am publish time.

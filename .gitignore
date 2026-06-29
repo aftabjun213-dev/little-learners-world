@@ -11,6 +11,10 @@ output/
 *.png
 *.jpg
 
+# ...but DO keep the background music library
+!music/
+!music/*.mp3
+
 # Python
 __pycache__/
 *.pyc

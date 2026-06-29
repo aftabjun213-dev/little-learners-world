@@ -3,11 +3,12 @@ Builds the final MP4 with FFmpeg:
   - each image gets a slow pan + zoom (Ken Burns effect)
   - scenes crossfade into each other
   - each scene's voiceover plays over its image, crossfading too
+  - soft background music plays underneath, with fade in/out
 """
 import json
 import subprocess
 
-from config import WIDTH, HEIGHT, FPS, CROSSFADE
+from config import WIDTH, HEIGHT, FPS, CROSSFADE, MUSIC_VOLUME
 
 
 def get_duration(path):
@@ -38,9 +39,10 @@ def _kenburns(idx, frames):
     )
 
 
-def build_video(scenes, out_path):
+def build_video(scenes, out_path, music_path=None):
     """
     scenes: list of dicts with keys 'image' and 'audio'.
+    music_path: optional mp3 to play softly underneath.
     Produces out_path (mp4).
     """
     n = len(scenes)
@@ -53,6 +55,11 @@ def build_video(scenes, out_path):
     # Audio inputs next (n .. 2n-1)
     for s in scenes:
         cmd += ["-i", s["audio"]]
+    # Optional background music input (looped forever; trimmed later)
+    music_idx = None
+    if music_path:
+        music_idx = 2 * n
+        cmd += ["-stream_loop", "-1", "-i", music_path]
 
     filters = []
 
@@ -91,12 +98,28 @@ def build_video(scenes, out_path):
             prev = out
         last_a = prev
 
+    # 3b) Mix soft background music under the narration (fade in + fade out)
+    final_a = last_a
+    if music_idx is not None:
+        total = sum(durations) - (n - 1) * CROSSFADE
+        fade_out_start = max(total - 3.0, 0.0)
+        filters.append(
+            f"[{music_idx}:a]volume={MUSIC_VOLUME},afade=t=in:st=0:d=2[bg]"
+        )
+        filters.append(
+            f"[{last_a}][bg]amix=inputs=2:duration=first:normalize=0[amixed]"
+        )
+        filters.append(
+            f"[amixed]afade=t=out:st={fade_out_start:.3f}:d=3[aout]"
+        )
+        final_a = "aout"
+
     filter_complex = ";".join(filters)
 
     cmd += [
         "-filter_complex", filter_complex,
         "-map", f"[{last_v}]",
-        "-map", f"[{last_a}]",
+        "-map", f"[{final_a}]",
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast",
         "-c:a", "aac", "-b:a", "192k",
         "-movflags", "+faststart",
