@@ -45,6 +45,13 @@ SUBTITLES = True         # burn cute captions onto the video
 FONTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "fonts")
 SUBTITLE_FONT = "Baloo 2"
 
+# ----- Shorts (vertical 9:16, under 60s) -----
+SHORT_WIDTH = 1080
+SHORT_HEIGHT = 1920
+SHORT_SCENE_COUNT = 4          # ~4 quick scenes
+SHORT_SECONDS_PER_SCENE = 11   # ~44s total, safely under the 60s Shorts limit
+SHORT_PUBLISH_HOURS = [12, 17] # publish the 2 daily shorts at these local hours
+
 # ----- Publishing -----
 # Your local timezone, used to schedule the 8am publish time.
 # Examples: "America/New_York", "America/Los_Angeles",

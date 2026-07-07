@@ -59,6 +59,54 @@ episode reaches roughly 5 to 6 minutes total.
 """
 
 
+def _build_short_prompt(topic_title, concept, scene_count, seconds_per_scene):
+    return f"""You are the host of a children's cartoon channel writing a super fun,
+punchy YOUTUBE SHORT (vertical, about 40-50 seconds total) for kids ages 3 to 7.
+
+Topic: "{topic_title}"
+Teaching goal: {concept}
+
+Rules for Shorts:
+- HOOK them in the first 3 seconds with excitement ("Wanna learn a secret? Let's go!").
+- Super energetic, warm, and playful — like a real host talking straight to the child.
+- Natural spoken English with contractions, questions, and fun sound words.
+- Teach just ONE tiny idea, repeated in a catchy way kids remember.
+- End with a cheerful line inviting them to follow for more.
+
+Return ONLY valid JSON (no markdown) in exactly this shape:
+
+{{
+  "video_title": "A punchy Shorts title (max 70 chars) with an emoji and the word Shorts vibe",
+  "description": "1-2 fun sentences for the description.",
+  "tags": ["10-15 short lowercase tags for kids learning shorts"],
+  "scenes": [
+    {{
+      "narration": "The exact excited spoken words for this scene (about {seconds_per_scene} seconds).",
+      "image_prompt": "One bright vertical cartoon illustration for this scene. Keep characters consistent. Always include: 'soft cute 2D cartoon illustration for toddlers, bright cheerful colors, simple rounded shapes, storybook style, vertical composition, no text'."
+    }}
+  ]
+}}
+
+Make exactly {scene_count} fast, punchy scenes that flow together.
+"""
+
+
+def generate_short_script(topic_title, concept, scene_count, seconds_per_scene):
+    client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"].strip())
+    prompt = _build_short_prompt(topic_title, concept, scene_count, seconds_per_scene)
+    resp = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=1500,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    data = _extract_json(resp.content[0].text)
+    data.setdefault("tags", [])
+    data["tags"] = list(data["tags"]) + [
+        "shorts", "kids shorts", "learning for kids", "toddler", CHANNEL_NAME.lower(),
+    ]
+    return data
+
+
 def _extract_json(text):
     """Claude usually returns clean JSON, but strip code fences just in case."""
     text = text.strip()

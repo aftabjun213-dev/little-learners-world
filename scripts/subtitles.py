@@ -27,31 +27,39 @@ def _split_sentences(text):
     return [p.strip() for p in parts if p.strip()]
 
 
-def _header():
+def _header(width, height, font_size, margin_v):
     # Colors are &HAABBGGRR. White fill, thick dark-purple outline, soft shadow.
     return f"""[Script Info]
 ScriptType: v4.00+
-PlayResX: {WIDTH}
-PlayResY: {HEIGHT}
+PlayResX: {width}
+PlayResY: {height}
 WrapStyle: 0
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cute,{SUBTITLE_FONT},80,&H00FFFFFF,&H000000FF,&H00762C4A,&H64000000,-1,0,0,0,100,100,0,0,1,6,3,2,120,120,120,1
+Style: Cute,{SUBTITLE_FONT},{font_size},&H00FFFFFF,&H000000FF,&H00762C4A,&H64000000,-1,0,0,0,100,100,0,0,1,6,3,2,120,120,{margin_v},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
 
-def build_ass(scenes, durations, out_path):
+def build_ass(scenes, durations, out_path, width=None, height=None):
     """
     scenes: list of dicts with a 'narration' key.
     durations: matching list of each scene's audio length (seconds).
+    width/height default to the main video size (pass vertical for Shorts).
     Writes an .ass file to out_path.
     """
-    lines = [_header()]
+    width = width or WIDTH
+    height = height or HEIGHT
+    # Bigger text + higher margin for tall vertical Shorts.
+    is_vertical = height > width
+    font_size = 96 if is_vertical else 80
+    margin_v = int(height * 0.28) if is_vertical else 120
+
+    lines = [_header(width, height, font_size, margin_v)]
 
     start = 0.0
     for i, scene in enumerate(scenes):

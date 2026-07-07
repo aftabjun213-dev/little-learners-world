@@ -31,7 +31,7 @@ def get_duration(path):
     return float(json.loads(out)["format"]["duration"])
 
 
-def _kenburns(idx, frames):
+def _kenburns(idx, frames, width, height):
     """
     Dynamic motion for one looped image input. Varies direction per scene.
 
@@ -55,21 +55,25 @@ def _kenburns(idx, frames):
         x, y = "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"
 
     # Supersample 1.5x for a crisp pan/zoom without the CPU cost of full 4K.
-    ss_w, ss_h = int(WIDTH * 1.5), int(HEIGHT * 1.5)
+    ss_w, ss_h = int(width * 1.5), int(height * 1.5)
     return (
         f"[{idx}:v]scale={ss_w}:{ss_h},"
         f"zoompan=z='{z}':d=1:x='{x}':y='{y}':"
-        f"s={WIDTH}x{HEIGHT}:fps={FPS},setsar=1,format=yuv420p[v{idx}]"
+        f"s={width}x{height}:fps={FPS},setsar=1,format=yuv420p[v{idx}]"
     )
 
 
-def build_video(scenes, out_path, music_path=None, sparkle_path=None):
+def build_video(scenes, out_path, music_path=None, sparkle_path=None,
+                width=None, height=None):
     """
     scenes: list of dicts with keys 'image' and 'audio'.
     music_path: optional mp3 to play softly underneath.
-    sparkle_path: optional PNG (WIDTH x HEIGHT*2) of drifting particles.
+    sparkle_path: optional PNG (width x height*2) of drifting particles.
+    width/height default to the main landscape size (pass vertical for Shorts).
     Produces out_path (mp4).
     """
+    width = width or WIDTH
+    height = height or HEIGHT
     n = len(scenes)
     durations = [get_duration(s["audio"]) for s in scenes]
     # The intended final length (scenes overlap by CROSSFADE each transition).
@@ -102,7 +106,7 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
     # 1) Motion for each image
     for i, d in enumerate(durations):
         frames = max(int(round(d * FPS)), 1)
-        filters.append(_kenburns(i, frames))
+        filters.append(_kenburns(i, frames, width, height))
 
     # 2) Transition the video scenes together (varied effects)
     if n == 1:
@@ -125,11 +129,11 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
     # 2b) Drift floating sparkles over the whole video
     if sparkle_idx is not None:
         filters.append(
-            f"[{sparkle_idx}:v]scale={WIDTH}:{HEIGHT*2},format=rgba[spr]"
+            f"[{sparkle_idx}:v]scale={width}:{height*2},format=rgba[spr]"
         )
         filters.append(
             f"[{last_v}][spr]overlay=x=0:"
-            f"y='-(mod(t*{SPARKLE_SPEED},{HEIGHT}))':"
+            f"y='-(mod(t*{SPARKLE_SPEED},{height}))':"
             f"format=yuv420:shortest=1[outv]"
         )
         last_v = "outv"
@@ -139,7 +143,7 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
         ass_path = os.path.join(
             os.path.dirname(os.path.abspath(out_path)), "subs.ass"
         )
-        build_ass(scenes, durations, ass_path)
+        build_ass(scenes, durations, ass_path, width, height)
         ass_f = ass_path.replace("\\", "/")
         fonts_f = FONTS_DIR.replace("\\", "/")
         filters.append(

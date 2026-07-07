@@ -16,11 +16,11 @@ from config import WIDTH, HEIGHT
 FLUX_MODEL = "black-forest-labs/flux-schnell"
 
 
-def _pollinations(prompt, out_path, seed, retries):
+def _pollinations(prompt, out_path, seed, retries, width, height):
     encoded = urllib.parse.quote(prompt)
     url = (
         f"https://image.pollinations.ai/prompt/{encoded}"
-        f"?width={WIDTH}&height={HEIGHT}&seed={seed}&nologo=true&model=flux"
+        f"?width={width}&height={height}&seed={seed}&nologo=true&model=flux"
     )
     last_err = None
     for attempt in range(retries):
@@ -38,14 +38,14 @@ def _pollinations(prompt, out_path, seed, retries):
     raise RuntimeError(f"Pollinations failed after {retries} tries: {last_err}")
 
 
-def _replicate(prompt, out_path, seed):
+def _replicate(prompt, out_path, seed, aspect_ratio):
     import replicate  # imported here so it's only needed when a token exists
 
     output = replicate.run(
         FLUX_MODEL,
         input={
             "prompt": prompt,
-            "aspect_ratio": "16:9",
+            "aspect_ratio": aspect_ratio,
             "output_format": "png",
             "num_outputs": 1,
             "seed": seed,
@@ -62,14 +62,21 @@ def _replicate(prompt, out_path, seed):
     return out_path
 
 
-def generate_image(prompt, out_path, seed=0, retries=4):
-    """Create one cartoon image. Uses Flux if available, else Pollinations."""
+def generate_image(prompt, out_path, seed=0, retries=4,
+                   width=None, height=None, aspect_ratio="16:9"):
+    """Create one cartoon image. Uses Flux if available, else Pollinations.
+
+    width/height default to the main (landscape) video size; pass the vertical
+    size and aspect_ratio='9:16' for Shorts.
+    """
+    width = width or WIDTH
+    height = height or HEIGHT
     if os.environ.get("REPLICATE_API_TOKEN"):
         try:
-            return _replicate(prompt, out_path, seed)
+            return _replicate(prompt, out_path, seed, aspect_ratio)
         except Exception as e:  # noqa: BLE001
             print(f"  Flux failed ({e}); falling back to Pollinations...")
-    return _pollinations(prompt, out_path, seed, retries)
+    return _pollinations(prompt, out_path, seed, retries, width, height)
 
 
 if __name__ == "__main__":
