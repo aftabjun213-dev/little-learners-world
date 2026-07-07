@@ -79,7 +79,11 @@ def main():
         image_path = os.path.join(OUTPUT_DIR, f"scene_{i}.png")
         generate_audio(scene["narration"], audio_path, voice=voice)
         generate_image(scene["image_prompt"], image_path, seed=base_seed + i)
-        media.append({"image": image_path, "audio": audio_path})
+        media.append({
+            "image": image_path,
+            "audio": audio_path,
+            "narration": scene["narration"],
+        })
 
     # 4. Build the video (with soft music + floating sparkles)
     print("Building the video with FFmpeg (this takes a few minutes)...")

@@ -7,9 +7,11 @@ Builds the final MP4 with FFmpeg:
   - soft background music plays underneath, with fade in/out
 """
 import json
+import os
 import subprocess
 
-from config import WIDTH, HEIGHT, FPS, CROSSFADE, MUSIC_VOLUME
+from config import WIDTH, HEIGHT, FPS, CROSSFADE, MUSIC_VOLUME, SUBTITLES, FONTS_DIR
+from subtitles import build_ass
 
 # A rotating set of gentle, kid-friendly scene transitions.
 TRANSITIONS = [
@@ -52,8 +54,10 @@ def _kenburns(idx, frames):
         z = "max(1.18-0.0006*on,1.0)"
         x, y = "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"
 
+    # Supersample 1.5x for a crisp pan/zoom without the CPU cost of full 4K.
+    ss_w, ss_h = int(WIDTH * 1.5), int(HEIGHT * 1.5)
     return (
-        f"[{idx}:v]scale={WIDTH*2}:{HEIGHT*2},"
+        f"[{idx}:v]scale={ss_w}:{ss_h},"
         f"zoompan=z='{z}':d=1:x='{x}':y='{y}':"
         f"s={WIDTH}x{HEIGHT}:fps={FPS},setsar=1,format=yuv420p[v{idx}]"
     )
@@ -129,6 +133,19 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None):
             f"format=yuv420:shortest=1[outv]"
         )
         last_v = "outv"
+
+    # 2c) Burn cute subtitles (timed to each scene's narration)
+    if SUBTITLES and any(s.get("narration") for s in scenes):
+        ass_path = os.path.join(
+            os.path.dirname(os.path.abspath(out_path)), "subs.ass"
+        )
+        build_ass(scenes, durations, ass_path)
+        ass_f = ass_path.replace("\\", "/")
+        fonts_f = FONTS_DIR.replace("\\", "/")
+        filters.append(
+            f"[{last_v}]subtitles=filename='{ass_f}':fontsdir='{fonts_f}'[vsub]"
+        )
+        last_v = "vsub"
 
     # 3) Crossfade the audio tracks together
     if n == 1:

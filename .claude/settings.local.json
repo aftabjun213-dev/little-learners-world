@@ -17,7 +17,11 @@
       "Bash(git pull *)",
       "Bash(python -c \"import ast,glob; [ast.parse\\(open\\(f,encoding='utf-8'\\).read\\(\\)\\) for f in glob.glob\\('scripts/*.py'\\)]; print\\('Syntax OK'\\)\")",
       "Bash(python -c ' *)",
-      "Bash(python -m pip install --quiet Pillow)"
+      "Bash(python -m pip install --quiet Pillow)",
+      "WebFetch(domain:www.youtube.com)",
+      "WebSearch",
+      "Bash(xxd FredokaOne-Regular.ttf)",
+      "Bash(python -m pip install --quiet fonttools)"
     ]
   }
 }
