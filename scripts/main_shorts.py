@@ -89,16 +89,17 @@ def main():
     state = load_json(STATE_FILE, {"index": 0})
     idx = state.get("index", 0)
 
-    print(f"=== {CHANNEL_NAME} Shorts ===")
-    for slot in range(2):  # two shorts per run
+    num_shorts = len(SHORT_PUBLISH_HOURS)  # one short per publish time
+    print(f"=== {CHANNEL_NAME} Shorts ({num_shorts} today) ===")
+    for slot in range(num_shorts):
         topic = topics[(idx + slot) % len(topics)]
-        hour = SHORT_PUBLISH_HOURS[slot % len(SHORT_PUBLISH_HOURS)]
+        hour = SHORT_PUBLISH_HOURS[slot]
         make_one_short(topic, slot, hour)
 
-    state["index"] = (idx + 2) % len(topics)
+    state["index"] = (idx + num_shorts) % len(topics)
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
-    print("\nDone! Two shorts uploaded.")
+    print(f"\nDone! {num_shorts} shorts uploaded.")
 
 
 if __name__ == "__main__":

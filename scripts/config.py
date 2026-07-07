@@ -50,7 +50,10 @@ SHORT_WIDTH = 1080
 SHORT_HEIGHT = 1920
 SHORT_SCENE_COUNT = 4          # ~4 quick scenes
 SHORT_SECONDS_PER_SCENE = 11   # ~44s total, safely under the 60s Shorts limit
-SHORT_PUBLISH_HOURS = [12, 17] # publish the 2 daily shorts at these local hours
+# One publish time per short => this list also sets HOW MANY shorts per day.
+# Spread across peak kid-viewing windows (local time): late morning,
+# after-nap afternoon, and early evening.
+SHORT_PUBLISH_HOURS = [11, 15, 19]
 
 # ----- Publishing -----
 # Your local timezone, used to schedule the 8am publish time.

@@ -13,7 +13,7 @@ permissions:
 jobs:
   make-and-upload-shorts:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - name: Get the code
         uses: actions/checkout@v4
