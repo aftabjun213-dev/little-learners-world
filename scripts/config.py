@@ -13,10 +13,19 @@ CHANNEL_NAME = "Little Learners World"
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
 # ----- Voice (edge-tts, free) -----
-# Warm, friendly voices good for kids. Change if you like:
-#   en-US-AnaNeural      -> cheerful child voice
-#   en-US-JennyNeural    -> warm, friendly woman
-#   en-GB-SoniaNeural    -> calm British woman
+# A pool of warm, friendly, kid-appropriate narrator voices. The robot picks a
+# different one for each episode so the channel doesn't sound repetitive.
+VOICES = [
+    "en-US-AvaNeural",       # natural, warm woman (very expressive)
+    "en-US-EmmaNeural",      # gentle, friendly woman
+    "en-US-JennyNeural",     # warm, friendly woman
+    "en-US-AriaNeural",      # bright, cheerful woman
+    "en-US-AndrewNeural",    # warm, friendly man
+    "en-US-BrianNeural",     # relaxed, friendly man
+    "en-GB-SoniaNeural",     # calm British woman
+    "en-AU-NatashaNeural",   # cheerful Australian woman
+]
+# Fallback single voice (used if the pool is somehow empty).
 VOICE = os.environ.get("VOICE", "en-US-JennyNeural")
 
 # Slightly slower speech is easier for little kids to follow.

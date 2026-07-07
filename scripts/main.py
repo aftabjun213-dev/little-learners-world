@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 # Allow "python scripts/main.py" to find sibling modules
 sys.path.insert(0, os.path.dirname(__file__))
 
-from config import OUTPUT_DIR, TIMEZONE, PUBLISH_HOUR, CHANNEL_NAME
+from config import OUTPUT_DIR, TIMEZONE, PUBLISH_HOUR, CHANNEL_NAME, VOICES, VOICE
 from generate_script import generate_script
 from generate_audio import generate_audio
 from generate_images import generate_image
@@ -66,6 +66,10 @@ def main():
     script = generate_script(topic["title"], topic["concept"])
     scenes = script["scenes"]
 
+    # Pick one narrator voice for this whole episode (varies each episode).
+    voice = random.choice(VOICES) if VOICES else VOICE
+    print(f"Narrator voice: {voice}")
+
     # 2/3. Per-scene audio + image
     media = []
     base_seed = random.randint(1, 1_000_000)
@@ -73,7 +77,7 @@ def main():
         print(f"Scene {i + 1}/{len(scenes)}: voice + image...")
         audio_path = os.path.join(OUTPUT_DIR, f"scene_{i}.mp3")
         image_path = os.path.join(OUTPUT_DIR, f"scene_{i}.png")
-        generate_audio(scene["narration"], audio_path)
+        generate_audio(scene["narration"], audio_path, voice=voice)
         generate_image(scene["image_prompt"], image_path, seed=base_seed + i)
         media.append({"image": image_path, "audio": audio_path})
 
