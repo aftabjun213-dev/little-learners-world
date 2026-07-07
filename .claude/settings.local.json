@@ -21,7 +21,9 @@
       "WebFetch(domain:www.youtube.com)",
       "WebSearch",
       "Bash(xxd FredokaOne-Regular.ttf)",
-      "Bash(python -m pip install --quiet fonttools)"
+      "Bash(python -m pip install --quiet fonttools)",
+      "Bash(git fetch *)",
+      "Bash(git ls-tree *)"
     ]
   }
 }

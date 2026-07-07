@@ -13,23 +13,20 @@ CHANNEL_NAME = "Little Learners World"
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
 # ----- Voice (edge-tts, free) -----
-# A pool of warm, friendly, kid-appropriate narrator voices. The robot picks a
-# different one for each episode so the channel doesn't sound repetitive.
+# A pool of the most NATURAL-sounding voices (the newer "Multilingual" models
+# are far less robotic than the older ones). The robot picks a different one
+# each episode so the channel doesn't sound repetitive.
 VOICES = [
-    "en-US-AvaNeural",       # natural, warm woman (very expressive)
-    "en-US-EmmaNeural",      # gentle, friendly woman
-    "en-US-JennyNeural",     # warm, friendly woman
-    "en-US-AriaNeural",      # bright, cheerful woman
-    "en-US-AndrewNeural",    # warm, friendly man
-    "en-US-BrianNeural",     # relaxed, friendly man
-    "en-GB-SoniaNeural",     # calm British woman
-    "en-AU-NatashaNeural",   # cheerful Australian woman
+    "en-US-AvaMultilingualNeural",      # warm, expressive woman (very natural)
+    "en-US-EmmaMultilingualNeural",     # gentle, friendly woman
+    "en-US-AndrewMultilingualNeural",   # warm, conversational man
+    "en-US-BrianMultilingualNeural",    # relaxed, friendly man
 ]
 # Fallback single voice (used if the pool is somehow empty).
-VOICE = os.environ.get("VOICE", "en-US-JennyNeural")
+VOICE = os.environ.get("VOICE", "en-US-AvaMultilingualNeural")
 
-# Slightly slower speech is easier for little kids to follow.
-VOICE_RATE = os.environ.get("VOICE_RATE", "-8%")
+# A natural, gentle pace. (Too slow makes neural voices sound robotic.)
+VOICE_RATE = os.environ.get("VOICE_RATE", "-4%")
 
 # ----- Video look -----
 WIDTH = 1920           # Full HD width (1080p)
