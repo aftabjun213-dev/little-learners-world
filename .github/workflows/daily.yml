@@ -44,4 +44,5 @@ jobs:
           git config user.email "actions@github.com"
           git add state.json
           git commit -m "Advance to next episode [skip ci]" || echo "No change to commit"
-          git push
+          git pull --rebase --autostash origin main || true
+          git push || (git pull --rebase --autostash origin main && git push) || echo "push skipped"
