@@ -69,11 +69,13 @@ SHORT_SECONDS_PER_SCENE = 11   # ~44s total, safely under the 60s Shorts limit
 SHORT_PUBLISH_HOURS = [11, 15, 19]
 
 # ----- Publishing -----
-# Your local timezone, used to schedule the 8am publish time.
-# Examples: "America/New_York", "America/Los_Angeles",
-#           "Europe/London", "Asia/Seoul", "Asia/Kolkata"
-TIMEZONE = os.environ.get("TIMEZONE") or "America/Los_Angeles"
-PUBLISH_HOUR = int(os.environ.get("PUBLISH_HOUR") or "8")   # 8 = 8am
+# Timezone the publish time is anchored to. We anchor to US EASTERN because the
+# audience is US English-speaking kids and Eastern has the biggest population.
+# Examples: "America/New_York", "America/Los_Angeles", "Europe/London", "Asia/Kolkata"
+TIMEZONE = os.environ.get("TIMEZONE") or "America/New_York"
+# 15 = 3 PM. Research shows 2-4 PM (after school) is the best window for young
+# kids on weekdays, and a good midday slot on weekends.
+PUBLISH_HOUR = int(os.environ.get("PUBLISH_HOUR") or "15")
 
 # Where temporary files are written
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
