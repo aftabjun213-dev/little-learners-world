@@ -17,15 +17,16 @@ from zoneinfo import ZoneInfo
 # Allow "python scripts/main.py" to find sibling modules
 sys.path.insert(0, os.path.dirname(__file__))
 
-from config import OUTPUT_DIR, TIMEZONE, PUBLISH_HOUR, CHANNEL_NAME, VOICES, VOICE
-from generate_script import generate_script
+from config import (OUTPUT_DIR, TIMEZONE, PUBLISH_HOUR, CHANNEL_NAME,
+                    VOICES, VOICE, WIDTH, HEIGHT, CROSSFADE)
+from generate_script import generate_script, STRUCTURES
 from generate_audio import generate_audio
 from generate_images import generate_image
-from make_video import build_video
+from make_video import build_video, get_duration
+from make_thumbnail import make_thumbnail
 from music_picker import pick_music
 from effects import make_sparkle_overlay
 from upload_youtube import upload_video
-from config import WIDTH, HEIGHT
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 TOPICS_FILE = os.path.join(ROOT, "topics.json")
@@ -61,23 +62,32 @@ def main():
     print(f"=== {CHANNEL_NAME} ===")
     print(f"Episode #{idx + 1}: {topic['title']}")
 
+    # VARIETY ENFORCEMENT: never repeat yesterday's structure or voice.
+    last_structure = state.get("last_structure")
+    last_voice = state.get("last_voice")
+    structure = random.choice(
+        [s for s in STRUCTURES if s[0] != last_structure] or STRUCTURES)
+    voice = random.choice(
+        [v for v in VOICES if v != last_voice] or VOICES or [VOICE])
+    print(f"Story structure: {structure[0]}  |  Narrator: {voice}")
+
     # 1. Story + SEO from Claude
     print("Writing the story with Claude Haiku...")
-    script = generate_script(topic["title"], topic["concept"])
+    script = generate_script(topic["title"], topic["concept"],
+                             structure=structure)
     scenes = script["scenes"]
+    print(f"Title chosen: {script['video_title']}")
 
-    # Pick one narrator voice for this whole episode (varies each episode).
-    voice = random.choice(VOICES) if VOICES else VOICE
-    print(f"Narrator voice: {voice}")
-
-    # 2/3. Per-scene audio + image
+    # 2/3. Per-scene audio (mood-paced) + image
     media = []
     base_seed = random.randint(1, 1_000_000)
     for i, scene in enumerate(scenes):
-        print(f"Scene {i + 1}/{len(scenes)}: voice + image...")
+        print(f"Scene {i + 1}/{len(scenes)} "
+              f"[{scene.get('mood', 'curious')}]: voice + image...")
         audio_path = os.path.join(OUTPUT_DIR, f"scene_{i}.mp3")
         image_path = os.path.join(OUTPUT_DIR, f"scene_{i}.png")
-        generate_audio(scene["narration"], audio_path, voice=voice)
+        generate_audio(scene["narration"], audio_path, voice=voice,
+                       mood=scene.get("mood"))
         generate_image(scene["image_prompt"], image_path, seed=base_seed + i)
         media.append({
             "image": image_path,
@@ -96,25 +106,51 @@ def main():
     build_video(media, video_path, music_path=music_path,
                 sparkle_path=sparkle_path)
 
-    # 5. Upload to YouTube
+    # 4b. Dedicated thumbnail (falls back to scene 1 if anything goes wrong)
+    thumbnail = media[0]["image"]
+    try:
+        if script.get("thumbnail_prompt"):
+            print("Making the thumbnail...")
+            thumbnail = make_thumbnail(
+                generate_image, script["thumbnail_prompt"],
+                script.get("thumbnail_text", ""), OUTPUT_DIR,
+                seed=base_seed + 999, episode_index=idx,
+            )
+    except Exception as e:  # noqa: BLE001
+        print(f"  (Thumbnail generation failed, using scene 1: {e})")
+
+    # 5. Upload to YouTube (with chapters for discoverability)
     publish_at = next_publish_time()
     print(f"Uploading to YouTube (will publish at {publish_at})...")
     title = script["video_title"]
+
+    # Chapter timestamps from real scene durations (YouTube needs 0:00 first)
+    chapters = []
+    t = 0.0
+    for i, (m, scene) in enumerate(zip(media, scenes)):
+        label = (scene.get("chapter_title") or f"Part {i + 1}").strip()
+        chapters.append(f"{int(t // 60)}:{int(t % 60):02d} {label}")
+        t += get_duration(m["audio"]) - CROSSFADE
+
     description = (
         f"{script['description']}\n\n"
-        f"Welcome to {CHANNEL_NAME} - fun, gentle learning for little kids!\n"
-        f"#kids #learning #cartoon #preschool"
+        + "\n".join(chapters) + "\n\n"
+        f"Welcome to {CHANNEL_NAME} - fun, gentle learning for kids ages 3-7!\n"
+        f"New episodes every day. Perfect for preschool, toddlers and "
+        f"kindergarten: colors, counting, shapes, animals, feelings and more.\n"
+        f"#kids #learning #cartoon #preschool #toddler"
     )
     if music_credit:
         description += f"\n\n---\n{music_credit}"
-    thumbnail = media[0]["image"]  # use the first scene image as thumbnail
     upload_video(
         video_path, title, description, script["tags"], publish_at,
         thumbnail_path=thumbnail,
     )
 
-    # 6. Save progress
+    # 6. Save progress + variety memory
     state["index"] = (idx + 1) % len(topics)
+    state["last_structure"] = script.get("structure_used", structure[0])
+    state["last_voice"] = voice
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
     print("Done! Tomorrow will use the next topic.")

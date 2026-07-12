@@ -1,10 +1,11 @@
 name: Daily Kids Shorts
 
+# SHORTS DISABLED (2026-07-12): channel strategy shifted to long-form only.
+# The daily schedule is commented out; the workflow can still be run manually
+# from the Actions tab (workflow_dispatch) if ever needed again.
 on:
-  schedule:
-    # 03:00 UTC (an hour after the main video). Makes 2 shorts that publish
-    # at the two different times set in config (SHORT_PUBLISH_HOURS).
-    - cron: "0 3 * * *"
+  # schedule:
+  #   - cron: "0 3 * * *"
   workflow_dispatch: {}
 
 permissions:

@@ -28,13 +28,26 @@ VOICE = os.environ.get("VOICE", "en-US-AvaMultilingualNeural")
 # A natural, gentle pace. (Too slow makes neural voices sound robotic.)
 VOICE_RATE = os.environ.get("VOICE_RATE", "-4%")
 
+# Per-scene delivery: the script engine tags each scene with a mood and the
+# voice speeds up / slows down + shifts pitch to match. (rate, pitch)
+MOOD_STYLES = {
+    "excited": ("+6%", "+15Hz"),
+    "curious": ("-2%", "+6Hz"),
+    "gentle":  ("-8%", "-4Hz"),
+    "silly":   ("+5%", "+18Hz"),
+    "calm":    ("-12%", "-8Hz"),
+}
+
 # ----- Video look -----
 WIDTH = 1920           # Full HD width (1080p)
 HEIGHT = 1080          # Full HD height
 FPS = 25
 CROSSFADE = 0.6          # seconds of crossfade between scenes
-SCENE_COUNT = 16         # how many scenes (images) per video (~5-6 min total)
-SECONDS_PER_SCENE = 20   # rough target narration length per scene
+# Retention data (Jul 2026) showed kids watched only 24-48s of 5-min videos.
+# Shorter, punchier episodes hold a bigger % of the video -> better algorithm
+# signal. (To go longer again, raise SCENE_COUNT back toward 16.)
+SCENE_COUNT = 12         # how many scenes (images) per video (~3 min total)
+SECONDS_PER_SCENE = 15   # rough target narration length per scene
 
 # ----- Background music -----
 MUSIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "music")
