@@ -24,7 +24,8 @@
       "Bash(python -m pip install --quiet fonttools)",
       "Bash(git fetch *)",
       "Bash(git ls-tree *)",
-      "Bash(git credential *)"
+      "Bash(git credential *)",
+      "Bash(python -c \"import json; c=json.load\\(open\\('characters.json'\\)\\); print\\('Hero->EL voice:', ', '.join\\(f\\\\\"{h['name']}->{h['eleven_voice']}\\\\\" for h in c\\)\\)\")"
     ]
   }
 }

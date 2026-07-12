@@ -38,6 +38,22 @@ MOOD_STYLES = {
     "calm":    ("-12%", "-8Hz"),
 }
 
+# ----- ElevenLabs (premium voice - optional) -----
+# Activates automatically when the ELEVENLABS_API_KEY secret is set.
+# "eleven_flash_v2_5" = excellent quality at HALF the credit cost (0.5 credit/
+# char) so your monthly credits cover roughly 2x more videos. For maximum
+# richness on a bigger plan, set ELEVEN_MODEL to "eleven_multilingual_v2".
+ELEVEN_MODEL = os.environ.get("ELEVEN_MODEL") or "eleven_flash_v2_5"
+# Per-scene mood -> (stability, style). Lower stability + higher style = more
+# emotion/energy; higher stability + low style = calmer, steadier.
+ELEVEN_MOODS = {
+    "excited": (0.30, 0.65),
+    "curious": (0.40, 0.45),
+    "gentle":  (0.55, 0.30),
+    "silly":   (0.28, 0.75),
+    "calm":    (0.62, 0.20),
+}
+
 # ----- Video look -----
 WIDTH = 1920           # Full HD width (1080p)
 HEIGHT = 1080          # Full HD height

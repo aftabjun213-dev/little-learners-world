@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from config import (OUTPUT_DIR, TIMEZONE, PUBLISH_HOUR, CHANNEL_NAME,
                     VOICES, VOICE, WIDTH, HEIGHT, CROSSFADE)
 from generate_script import generate_script, STRUCTURES
-from generate_audio import generate_audio
+from generate_audio import generate_audio, eleven_available
 from generate_images import generate_image
 from make_video import build_video, get_duration
 from make_thumbnail import make_thumbnail
@@ -70,9 +70,12 @@ def main():
     hero_days_used = state.get("hero_days_used", 0)
     if characters:
         hero = characters[hero_index % len(characters)]
-        voice = hero["voice"]
-        print(f"Hero: {hero['name']} "
-              f"(day {hero_days_used + 1} of {hero['days']})  |  Voice: {voice}")
+        # Premium ElevenLabs voice when the key is set, free edge-tts otherwise
+        voice = (hero.get("eleven_voice") if eleven_available()
+                 else hero["voice"])
+        engine = "ElevenLabs" if eleven_available() else "edge-tts (free)"
+        print(f"Hero: {hero['name']} (day {hero_days_used + 1} of "
+              f"{hero['days']})  |  Voice: {voice} [{engine}]")
     else:  # no cast defined -> fall back to random narrator (old behaviour)
         hero = None
         voice = random.choice(VOICES) if VOICES else VOICE
