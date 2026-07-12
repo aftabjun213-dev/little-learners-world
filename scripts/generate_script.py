@@ -89,7 +89,10 @@ VOICE & TONE: Write exactly the way a warm, playful human storyteller SPEAKS:
 - Ellipses (...) for suspense pauses, "!" for excitement.
 - Warm, encouraging. No scary content. No violence. Nothing sad for long.
 
-Return ONLY valid JSON (no markdown, no extra text) in exactly this shape:
+Return ONLY valid JSON (no markdown, no extra text) in exactly this shape.
+CRITICAL JSON RULES: output must be strictly valid JSON. Inside every string,
+write any spoken words or emphasis with SINGLE quotes (') - never double quotes.
+No trailing commas. Do not put line breaks inside a string value.
 
 {{
   "hook_options": ["3 candidate opening lines - most exciting first"],
@@ -165,7 +168,8 @@ def generate_short_script(topic_title, concept, scene_count, seconds_per_scene):
 
 
 def _extract_json(text):
-    """Claude usually returns clean JSON, but strip code fences just in case."""
+    """Claude usually returns clean JSON, but strip code fences and repair the
+    most common slips (trailing commas) before parsing."""
     text = text.strip()
     text = re.sub(r"^```(?:json)?", "", text).strip()
     text = re.sub(r"```$", "", text).strip()
@@ -174,7 +178,12 @@ def _extract_json(text):
     end = text.rfind("}")
     if start != -1 and end != -1:
         text = text[start:end + 1]
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Remove trailing commas before } or ] then try once more
+        repaired = re.sub(r",(\s*[}\]])", r"\1", text)
+        return json.loads(repaired)
 
 
 def _lock_hero_look(prompt_text, hero):
@@ -199,13 +208,24 @@ def generate_script(topic_title, concept, scene_count=SCENE_COUNT,
     client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"].strip())
     prompt = _build_prompt(topic_title, concept, scene_count, structure, hero)
 
-    resp = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    raw = resp.content[0].text
-    data = _extract_json(raw)
+    # Retry a few times: Claude's JSON is occasionally malformed, and a fresh
+    # generation almost always fixes it. Never let one bad reply crash the run.
+    data = None
+    last_err = None
+    for attempt in range(4):
+        resp = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=8000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        try:
+            data = _extract_json(resp.content[0].text)
+            break
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            print(f"  Script JSON parse failed (attempt {attempt + 1}/4): {e}")
+    if data is None:
+        raise RuntimeError(f"Could not get valid script JSON: {last_err}")
 
     # Basic safety defaults so one missing field never crashes the nightly run
     data.setdefault("tags", [])
