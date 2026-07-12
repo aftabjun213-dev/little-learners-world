@@ -46,14 +46,24 @@ STRUCTURES = [
 ]
 
 
-def _build_prompt(topic_title, concept, scene_count, structure):
+def _build_prompt(topic_title, concept, scene_count, structure, hero):
     struct_name, struct_rules = structure
+    hero_block = ""
+    if hero:
+        hero_block = f"""
+TODAY'S HERO - {hero['name']} stars in EVERY scene of this story:
+- Who they are: {hero['personality']}
+- Their EXACT look (they must appear the SAME in every single scene): {hero['appearance']}
+Make {hero['name']} the beloved main character kids come back for. Use their name
+often and give them a fun little catchphrase. The whole story is {hero['name']}'s
+adventure while learning today's lesson.
+"""
     return f"""You are the beloved host and storyteller of a hit children's cartoon channel,
 writing one episode for kids ages 3 to 7.
 
-Episode title idea: "{topic_title}"
+Episode adventure: "{topic_title}"
 Teaching goal: {concept}
-
+{hero_block}
 TODAY'S STORY STRUCTURE (follow it - this is what keeps episodes feeling fresh):
 "{struct_name}": {struct_rules}
 
@@ -83,7 +93,7 @@ Return ONLY valid JSON (no markdown, no extra text) in exactly this shape:
 
 {{
   "hook_options": ["3 candidate opening lines - most exciting first"],
-  "title_options": ["3 to 5 YouTube title options, BEST FIRST, each max 75 chars with one emoji. Formula: fun hook + clear learning outcome parents search for (e.g. 'What Sound Does a Cow Make? \\ud83d\\udc04 Farm Animals for Kids'). Vary the formulas across options."],
+  "title_options": ["3 to 5 YouTube title options, BEST FIRST, each max 75 chars with one emoji. Include the hero's NAME for branding, plus the clear learning outcome parents search for (e.g. 'Max Learns His Colors! \\ud83c\\udf08 Colors for Kids'). Vary the formulas across options."],
   "description": "A warm 2-3 sentence YouTube description for parents mentioning the learning outcome and age range 3-7, ending with a gentle call to subscribe to {CHANNEL_NAME}.",
   "tags": ["10 to 15 short lowercase keyword tags relevant to kids learning and this topic"],
   "thumbnail_prompt": "A prompt for ONE eye-catching thumbnail image: extreme close-up of the episode's main character with a big expressive emotion (surprise/joy), ONE bright high-contrast background color, very simple composition. Include: 'soft cute 2D cartoon illustration for toddlers, bright cheerful colors, simple rounded shapes, storybook style, no text'.",
@@ -167,14 +177,27 @@ def _extract_json(text):
     return json.loads(text)
 
 
-def generate_script(topic_title, concept, scene_count=SCENE_COUNT, structure=None):
-    """structure: an entry from STRUCTURES; if None, one is chosen at random."""
+def _lock_hero_look(prompt_text, hero):
+    """Force the hero's exact appearance into an image prompt for consistency."""
+    if not hero:
+        return prompt_text
+    tag = f" The main character is {hero['name']}: {hero['appearance']}."
+    # Avoid doubling if the model already pasted the whole appearance in.
+    if hero["appearance"][:30].lower() in prompt_text.lower():
+        return prompt_text
+    return prompt_text.rstrip() + tag
+
+
+def generate_script(topic_title, concept, scene_count=SCENE_COUNT,
+                    structure=None, hero=None):
+    """structure: an entry from STRUCTURES (random if None).
+    hero: a dict from characters.json (name/appearance/personality/voice)."""
     import random as _random
     if structure is None:
         structure = _random.choice(STRUCTURES)
 
     client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"].strip())
-    prompt = _build_prompt(topic_title, concept, scene_count, structure)
+    prompt = _build_prompt(topic_title, concept, scene_count, structure, hero)
 
     resp = client.messages.create(
         model=CLAUDE_MODEL,
@@ -190,13 +213,20 @@ def generate_script(topic_title, concept, scene_count=SCENE_COUNT, structure=Non
         "kids learning", "educational cartoon for kids", "toddler videos",
         "preschool", "learning for kids", CHANNEL_NAME.lower(),
     ]
+    if hero:
+        data["tags"].append(hero["name"].lower())
     titles = data.get("title_options") or [data.get("video_title") or topic_title]
     data["video_title"] = titles[0]
     data["title_options"] = titles
     data["structure_used"] = structure[0]
+    # Lock the hero's look into every scene image AND the thumbnail
     for scene in data.get("scenes", []):
         scene.setdefault("mood", "curious")
         scene.setdefault("chapter_title", "")
+        scene["image_prompt"] = _lock_hero_look(
+            scene.get("image_prompt", ""), hero)
+    if data.get("thumbnail_prompt"):
+        data["thumbnail_prompt"] = _lock_hero_look(data["thumbnail_prompt"], hero)
     return data
 
 

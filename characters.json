@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Max",
+    "gender": "boy",
+    "appearance": "Max is a happy 5-year-old boy cartoon character with short messy brown hair, big friendly round eyes, rosy cheeks, a cheerful smile, wearing a bright red t-shirt with a yellow lightning-bolt on the chest, blue shorts, and green sneakers",
+    "personality": "curious, brave and super energetic, always asking 'why?' and 'what's that?' and racing off to explore",
+    "voice": "en-US-AndrewMultilingualNeural",
+    "days": 4
+  },
+  {
+    "name": "Lily",
+    "gender": "girl",
+    "appearance": "Lily is a cheerful 5-year-old girl cartoon character with curly black hair in two puffs tied with pink bows, big sparkly brown eyes, rosy cheeks, a sweet grin, wearing a sunny yellow dress with a flower, purple leggings, and little white shoes",
+    "personality": "kind, clever and giggly, loves counting, singing and helping her friends solve problems",
+    "voice": "en-US-AvaMultilingualNeural",
+    "days": 4
+  },
+  {
+    "name": "Sam",
+    "gender": "boy",
+    "appearance": "Sam is a gentle 4-year-old boy cartoon character with short curly blonde hair, big blue eyes, light freckles, round glasses, wearing a teal hoodie with a fluffy cloud on it, orange pants, and blue rain boots",
+    "personality": "thoughtful and imaginative, a little shy but very warm, adores animals, bugs and nature",
+    "voice": "en-US-BrianMultilingualNeural",
+    "days": 3
+  },
+  {
+    "name": "Zoe",
+    "gender": "girl",
+    "appearance": "Zoe is a bubbly 5-year-old girl cartoon character with straight orange hair in a short bob, big green eyes, a huge grin with a tiny gap in her teeth, wearing a teal polka-dot shirt, red overalls, and yellow rain boots",
+    "personality": "silly, adventurous and full of energy, loves music, dancing and being goofy",
+    "voice": "en-US-EmmaMultilingualNeural",
+    "days": 3
+  }
+]

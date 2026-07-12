@@ -23,7 +23,8 @@
       "Bash(xxd FredokaOne-Regular.ttf)",
       "Bash(python -m pip install --quiet fonttools)",
       "Bash(git fetch *)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(git credential *)"
     ]
   }
 }

@@ -31,6 +31,7 @@ from upload_youtube import upload_video
 ROOT = os.path.dirname(os.path.dirname(__file__))
 TOPICS_FILE = os.path.join(ROOT, "topics.json")
 STATE_FILE = os.path.join(ROOT, "state.json")
+CHARACTERS_FILE = os.path.join(ROOT, "characters.json")
 
 
 def load_json(path, default):
@@ -55,6 +56,7 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     topics = load_json(TOPICS_FILE, [])
+    characters = load_json(CHARACTERS_FILE, [])
     state = load_json(STATE_FILE, {"index": 0})
     idx = state.get("index", 0) % len(topics)
     topic = topics[idx]
@@ -62,19 +64,29 @@ def main():
     print(f"=== {CHANNEL_NAME} ===")
     print(f"Episode #{idx + 1}: {topic['title']}")
 
-    # VARIETY ENFORCEMENT: never repeat yesterday's structure or voice.
+    # HERO ROTATION: one recurring hero stars for several days, then the next
+    # rotates in. Each hero has their OWN consistent voice so kids recognise them.
+    hero_index = state.get("hero_index", 0)
+    hero_days_used = state.get("hero_days_used", 0)
+    if characters:
+        hero = characters[hero_index % len(characters)]
+        voice = hero["voice"]
+        print(f"Hero: {hero['name']} "
+              f"(day {hero_days_used + 1} of {hero['days']})  |  Voice: {voice}")
+    else:  # no cast defined -> fall back to random narrator (old behaviour)
+        hero = None
+        voice = random.choice(VOICES) if VOICES else VOICE
+
+    # STRUCTURE VARIETY: never repeat yesterday's structure.
     last_structure = state.get("last_structure")
-    last_voice = state.get("last_voice")
     structure = random.choice(
         [s for s in STRUCTURES if s[0] != last_structure] or STRUCTURES)
-    voice = random.choice(
-        [v for v in VOICES if v != last_voice] or VOICES or [VOICE])
-    print(f"Story structure: {structure[0]}  |  Narrator: {voice}")
+    print(f"Story structure: {structure[0]}")
 
-    # 1. Story + SEO from Claude
+    # 1. Story + SEO from Claude (starring today's hero)
     print("Writing the story with Claude Haiku...")
     script = generate_script(topic["title"], topic["concept"],
-                             structure=structure)
+                             structure=structure, hero=hero)
     scenes = script["scenes"]
     print(f"Title chosen: {script['video_title']}")
 
@@ -147,13 +159,20 @@ def main():
         thumbnail_path=thumbnail,
     )
 
-    # 6. Save progress + variety memory
+    # 6. Save progress + advance hero rotation
+    if characters:
+        hero_days_used += 1
+        if hero_days_used >= hero["days"]:   # hero's run is over -> next hero
+            hero_index = (hero_index + 1) % len(characters)
+            hero_days_used = 0
+        state["hero_index"] = hero_index
+        state["hero_days_used"] = hero_days_used
     state["index"] = (idx + 1) % len(topics)
     state["last_structure"] = script.get("structure_used", structure[0])
-    state["last_voice"] = voice
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
-    print("Done! Tomorrow will use the next topic.")
+    nxt = "same hero" if characters and hero_days_used != 0 else "a new hero"
+    print(f"Done! Tomorrow: next topic with {nxt}.")
 
 
 if __name__ == "__main__":
