@@ -69,7 +69,8 @@ SECONDS_PER_SCENE = 18   # rough target narration length per scene
 # instead of one still frame. ~every 6 seconds a new picture appears.
 IMAGE_SECONDS = 6        # target seconds each picture stays on screen
 IMAGES_PER_SCENE_MIN = 2
-IMAGES_PER_SCENE_MAX = 4
+# Max 3 pictures/scene keeps image cost ~$4/month (raising to 4 adds ~$1/mo)
+IMAGES_PER_SCENE_MAX = 3
 
 # ----- Background music -----
 MUSIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "music")
