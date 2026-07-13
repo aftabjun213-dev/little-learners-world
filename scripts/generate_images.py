@@ -40,10 +40,17 @@ def _pollinations(prompt, out_path, seed, retries, width, height):
     raise RuntimeError(f"Pollinations failed after {retries} tries: {last_err}")
 
 
-def _replicate(prompt, out_path, seed, aspect_ratio, premium=False):
-    import replicate  # imported here so it's only needed when a token exists
+def _replicate(prompt, out_path, seed, aspect_ratio, premium=False,
+               go_fast=True):
+    """Call Replicate's HTTP API directly in sync mode.
 
+    'Prefer: wait' caps how long a single attempt can hang - during Replicate
+    incidents (E9828) predictions otherwise sit for 1-5 minutes before dying,
+    which used to burn the whole job's time budget.
+    """
     model = FLUX_PREMIUM_MODEL if premium else FLUX_MODEL
+    token = os.environ["REPLICATE_API_TOKEN"].strip()
+    headers = {"Authorization": f"Bearer {token}"}
     inputs = {
         "prompt": prompt,
         "aspect_ratio": aspect_ratio,
@@ -52,16 +59,45 @@ def _replicate(prompt, out_path, seed, aspect_ratio, premium=False):
         "seed": seed,
     }
     if not premium:
-        inputs["go_fast"] = True
-    output = replicate.run(
-        model,
-        input=inputs,
+        # go_fast=False uses Replicate's alternate (bf16) pipeline - slower
+        # but on different infrastructure, so it often works when the fast
+        # lane is having an incident.
+        inputs["go_fast"] = go_fast
+
+    resp = requests.post(
+        f"https://api.replicate.com/v1/models/{model}/predictions",
+        headers={**headers, "Prefer": "wait=60"},
+        json={"input": inputs},
+        timeout=90,
     )
-    item = output[0]
-    if hasattr(item, "read"):          # newer replicate returns file objects
-        data = item.read()
-    else:                               # older versions return URLs
-        data = requests.get(str(item), timeout=120).content
+    if resp.status_code == 429:
+        raise RuntimeError(f"429 throttled: {resp.text[:150]}")
+    resp.raise_for_status()
+    pred = resp.json()
+    status = pred.get("status")
+
+    # If it's still queued after the sync wait, poll briefly then give up
+    # (a healthy flux image finishes in a couple of seconds).
+    get_url = (pred.get("urls") or {}).get("get")
+    waited = 0
+    while status in ("starting", "processing") and get_url and waited < 24:
+        time.sleep(4)
+        waited += 4
+        pred = requests.get(get_url, headers=headers, timeout=30).json()
+        status = pred.get("status")
+
+    if status != "succeeded":
+        cancel_url = (pred.get("urls") or {}).get("cancel")
+        if status in ("starting", "processing") and cancel_url:
+            try:  # don't pay for a prediction we've given up on
+                requests.post(cancel_url, headers=headers, timeout=15)
+            except Exception:  # noqa: BLE001
+                pass
+        raise RuntimeError(pred.get("error") or f"status={status}")
+
+    out = pred.get("output")
+    url = out[0] if isinstance(out, list) else out
+    data = requests.get(url, timeout=120).content
     with open(out_path, "wb") as f:
         f.write(data)
     return out_path
@@ -93,8 +129,10 @@ def generate_image(prompt, out_path, seed=0, retries=4,
             try:
                 if _flux_spacing:
                     time.sleep(_flux_spacing)
+                # Retries switch to the alternate pipeline (go_fast=False),
+                # which often dodges incidents on the fast lane.
                 result = _replicate(prompt, out_path, seed, aspect_ratio,
-                                    premium=premium)
+                                    premium=premium, go_fast=(attempt == 0))
                 _flux_failed_streak = 0
                 return result
             except Exception as e:  # noqa: BLE001
