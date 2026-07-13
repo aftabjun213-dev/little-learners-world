@@ -54,5 +54,6 @@ def make_thumbnail(generate_image_fn, thumb_prompt, thumb_text, out_dir,
     """
     raw = os.path.join(out_dir, "thumb_raw.png")
     final = os.path.join(out_dir, "thumbnail.png")
-    generate_image_fn(thumb_prompt, raw, seed=seed)
+    # premium=True -> top-quality Flux model just for this one image per video
+    generate_image_fn(thumb_prompt, raw, seed=seed, premium=True)
     return add_thumbnail_text(raw, thumb_text, final, episode_index)

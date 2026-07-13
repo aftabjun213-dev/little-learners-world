@@ -66,7 +66,9 @@ def _kenburns(idx, frames, width, height):
 def build_video(scenes, out_path, music_path=None, sparkle_path=None,
                 width=None, height=None):
     """
-    scenes: list of dicts with keys 'image' and 'audio'.
+    scenes: list of dicts with 'audio' plus either 'images' (a LIST of picture
+    paths - shown one after another with quick cuts inside the scene) or a
+    single 'image' (old behaviour, still used by Shorts).
     music_path: optional mp3 to play softly underneath.
     sparkle_path: optional PNG (width x height*2) of drifting particles.
     width/height default to the main landscape size (pass vertical for Shorts).
@@ -78,16 +80,23 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None,
     durations = [get_duration(s["audio"]) for s in scenes]
     # The intended final length (scenes overlap by CROSSFADE each transition).
     total = sum(durations) - (n - 1) * CROSSFADE
+    scene_imgs = [s.get("images") or [s["image"]] for s in scenes]
+    total_imgs = sum(len(imgs) for imgs in scene_imgs)
 
     cmd = ["ffmpeg", "-y"]
-    # Image inputs first (0 .. n-1)
-    for s, d in zip(scenes, durations):
-        cmd += ["-loop", "1", "-framerate", str(FPS), "-t", f"{d:.3f}", "-i", s["image"]]
-    # Audio inputs next (n .. 2n-1)
+    # Image inputs first (0 .. total_imgs-1). Each scene's pictures split its
+    # narration time equally, so pictures change quickly WITHIN a scene.
+    for imgs, d in zip(scene_imgs, durations):
+        sub = d / len(imgs)
+        for img in imgs:
+            cmd += ["-loop", "1", "-framerate", str(FPS),
+                    "-t", f"{sub:.3f}", "-i", img]
+    # Audio inputs next (total_imgs .. total_imgs+n-1)
     for s in scenes:
         cmd += ["-i", s["audio"]]
 
-    input_count = 2 * n
+    audio_base = total_imgs
+    input_count = total_imgs + n
     # Optional background music input (looped forever; trimmed later)
     music_idx = None
     if music_path:
@@ -103,23 +112,35 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None,
 
     filters = []
 
-    # 1) Motion for each image
-    for i, d in enumerate(durations):
-        frames = max(int(round(d * FPS)), 1)
-        filters.append(_kenburns(i, frames, width, height))
+    # 1) Motion for every picture, then hard-cut the pictures of one scene
+    #    together (quick cuts feel snappy; crossfades stay at scene borders).
+    g = 0  # global picture/input index
+    for i, (imgs, d) in enumerate(zip(scene_imgs, durations)):
+        k = len(imgs)
+        sub = d / k
+        frames = max(int(round(sub * FPS)), 1)
+        labels = []
+        for _ in imgs:
+            filters.append(_kenburns(g, frames, width, height))
+            labels.append(f"[v{g}]")
+            g += 1
+        if k == 1:
+            filters.append(f"{labels[0]}null[sv{i}]")
+        else:
+            filters.append(f"{''.join(labels)}concat=n={k}:v=1:a=0[sv{i}]")
 
-    # 2) Transition the video scenes together (varied effects)
+    # 2) Transition the scenes together (varied effects)
     if n == 1:
-        last_v = "v0"
+        last_v = "sv0"
     else:
         acc = durations[0]
-        prev = "v0"
+        prev = "sv0"
         for i in range(1, n):
             offset = acc - CROSSFADE
             out = f"vx{i}"
             trans = TRANSITIONS[i % len(TRANSITIONS)]
             filters.append(
-                f"[{prev}][v{i}]xfade=transition={trans}:"
+                f"[{prev}][sv{i}]xfade=transition={trans}:"
                 f"duration={CROSSFADE}:offset={offset:.3f}[{out}]"
             )
             acc += durations[i] - CROSSFADE
@@ -153,13 +174,13 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None,
 
     # 3) Crossfade the audio tracks together
     if n == 1:
-        last_a = f"{n}:a"
+        last_a = f"{audio_base}:a"
     else:
-        prev = f"{n}:a"
+        prev = f"{audio_base}:a"
         for i in range(1, n):
             out = f"ax{i}"
             filters.append(
-                f"[{prev}][{n + i}:a]acrossfade=d={CROSSFADE}[{out}]"
+                f"[{prev}][{audio_base + i}:a]acrossfade=d={CROSSFADE}[{out}]"
             )
             prev = out
         last_a = prev

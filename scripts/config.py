@@ -60,10 +60,16 @@ HEIGHT = 1080          # Full HD height
 FPS = 25
 CROSSFADE = 0.6          # seconds of crossfade between scenes
 # Retention data (Jul 2026) showed kids watched only 24-48s of 5-min videos.
-# Shorter, punchier episodes hold a bigger % of the video -> better algorithm
-# signal. (To go longer again, raise SCENE_COUNT back toward 16.)
-SCENE_COUNT = 12         # how many scenes (images) per video (~3 min total)
-SECONDS_PER_SCENE = 15   # rough target narration length per scene
+# Target length: 3-6 minutes (ElevenLabs reads a touch slower than the target,
+# so 12 scenes x ~18s lands around 4-5 minutes).
+SCENE_COUNT = 12         # how many story scenes per video
+SECONDS_PER_SCENE = 18   # rough target narration length per scene
+
+# Rapid picture changes: each scene shows several pictures with quick cuts
+# instead of one still frame. ~every 6 seconds a new picture appears.
+IMAGE_SECONDS = 6        # target seconds each picture stays on screen
+IMAGES_PER_SCENE_MIN = 2
+IMAGES_PER_SCENE_MAX = 4
 
 # ----- Background music -----
 MUSIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "music")

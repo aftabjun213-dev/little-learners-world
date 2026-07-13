@@ -12,8 +12,10 @@ import requests
 
 from config import WIDTH, HEIGHT
 
-# Cheapest good Flux model on Replicate; great for bright cartoon art.
+# Fast, cheap Flux for the many scene pictures (~$0.003 each)...
 FLUX_MODEL = "black-forest-labs/flux-schnell"
+# ...and the top-quality Flux for the ONE thumbnail per video (~$0.025-0.03).
+FLUX_PREMIUM_MODEL = "black-forest-labs/flux-dev"
 
 
 def _pollinations(prompt, out_path, seed, retries, width, height):
@@ -38,19 +40,22 @@ def _pollinations(prompt, out_path, seed, retries, width, height):
     raise RuntimeError(f"Pollinations failed after {retries} tries: {last_err}")
 
 
-def _replicate(prompt, out_path, seed, aspect_ratio):
+def _replicate(prompt, out_path, seed, aspect_ratio, premium=False):
     import replicate  # imported here so it's only needed when a token exists
 
+    model = FLUX_PREMIUM_MODEL if premium else FLUX_MODEL
+    inputs = {
+        "prompt": prompt,
+        "aspect_ratio": aspect_ratio,
+        "output_format": "png",
+        "num_outputs": 1,
+        "seed": seed,
+    }
+    if not premium:
+        inputs["go_fast"] = True
     output = replicate.run(
-        FLUX_MODEL,
-        input={
-            "prompt": prompt,
-            "aspect_ratio": aspect_ratio,
-            "output_format": "png",
-            "num_outputs": 1,
-            "seed": seed,
-            "go_fast": True,
-        },
+        model,
+        input=inputs,
     )
     item = output[0]
     if hasattr(item, "read"):          # newer replicate returns file objects
@@ -63,11 +68,13 @@ def _replicate(prompt, out_path, seed, aspect_ratio):
 
 
 def generate_image(prompt, out_path, seed=0, retries=4,
-                   width=None, height=None, aspect_ratio="16:9"):
+                   width=None, height=None, aspect_ratio="16:9",
+                   premium=False):
     """Create one cartoon image. Uses Flux if available, else Pollinations.
 
     width/height default to the main (landscape) video size; pass the vertical
-    size and aspect_ratio='9:16' for Shorts.
+    size and aspect_ratio='9:16' for Shorts. premium=True uses the top-quality
+    Flux model (reserved for thumbnails - it costs ~10x more per image).
     """
     width = width or WIDTH
     height = height or HEIGHT
@@ -77,7 +84,8 @@ def generate_image(prompt, out_path, seed=0, retries=4,
         # (hero consistency) and avoids the much slower Pollinations path.
         for attempt in range(3):
             try:
-                return _replicate(prompt, out_path, seed, aspect_ratio)
+                return _replicate(prompt, out_path, seed, aspect_ratio,
+                                  premium=premium)
             except Exception as e:  # noqa: BLE001
                 print(f"  Flux attempt {attempt + 1}/3 failed ({e})")
                 time.sleep(5 * (attempt + 1))

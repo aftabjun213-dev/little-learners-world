@@ -51,12 +51,21 @@ def _build_prompt(topic_title, concept, scene_count, structure, hero):
     hero_block = ""
     if hero:
         hero_block = f"""
-TODAY'S HERO - {hero['name']} stars in EVERY scene of this story:
+TODAY'S HERO - and this is the MOST important rule: {hero['name']} tells the WHOLE
+story THEMSELVES, in FIRST PERSON, like a real excited little kid talking to their
+best friend (the viewer). This is NOT an adult narrator describing {hero['name']} -
+it IS {hero['name']} speaking.
 - Who they are: {hero['personality']}
-- Their EXACT look (they must appear the SAME in every single scene): {hero['appearance']}
-Make {hero['name']} the beloved main character kids come back for. Use their name
-often and give them a fun little catchphrase. The whole story is {hero['name']}'s
-adventure while learning today's lesson.
+- Their EXACT look (they must appear IDENTICAL in every single picture): {hero['appearance']}
+
+FIRST-PERSON KID VOICE RULES:
+- Always 'I', 'me', 'my'. Present tense, as if it's happening RIGHT NOW.
+- Real kid speech: short excited bursts, big feelings, little giggles ('hee hee!'),
+  gasps ('WHOA!'), whispered secrets ('psst... come closer!'), tiny funny asides.
+- Treat the viewer as their best friend joining the adventure: 'Come ON, hold my
+  hand!', 'You count with me, okay?', 'Did YOU see that?!'
+- Simple words a 5-year-old really uses. No adult phrasing ever.
+- Give {hero['name']} their own fun catchphrase and use it 2-3 times.
 """
     return f"""You are the beloved host and storyteller of a hit children's cartoon channel,
 writing one episode for kids ages 3 to 7.
@@ -106,7 +115,7 @@ No trailing commas. Do not put line breaks inside a string value.
       "chapter_title": "2-4 word fun chapter name for this scene",
       "mood": "one of: excited, curious, gentle, silly, calm",
       "narration": "The exact spoken words for this scene (about {SECONDS_PER_SCENE} seconds read aloud). Follow ALL retention rules.",
-      "image_prompt": "A detailed description of a single bright, cute cartoon illustration for this scene. Keep the SAME characters looking consistent across scenes. Always include the style words: 'soft cute 2D cartoon illustration for toddlers, bright cheerful colors, simple rounded shapes, storybook style, no text'."
+      "image_prompts": ["EXACTLY 3 short picture descriptions for this scene, showing the action PROGRESSING: (1) how the moment starts, (2) the middle of the action, (3) how it ends. Each is 1-2 sentences describing one bright, cute cartoon illustration. Keep the SAME characters looking consistent. Always include the style words: 'soft cute 2D cartoon illustration for toddlers, bright cheerful colors, simple rounded shapes, storybook style, no text'."]
     }}
   ]
 }}
@@ -239,12 +248,17 @@ def generate_script(topic_title, concept, scene_count=SCENE_COUNT,
     data["video_title"] = titles[0]
     data["title_options"] = titles
     data["structure_used"] = structure[0]
-    # Lock the hero's look into every scene image AND the thumbnail
+    # Lock the hero's look into every scene picture AND the thumbnail
     for scene in data.get("scenes", []):
         scene.setdefault("mood", "curious")
         scene.setdefault("chapter_title", "")
-        scene["image_prompt"] = _lock_hero_look(
-            scene.get("image_prompt", ""), hero)
+        prompts = scene.get("image_prompts")
+        if not prompts:  # tolerate the old single-prompt shape
+            prompts = [scene.get("image_prompt", "")]
+        scene["image_prompts"] = [
+            _lock_hero_look(p, hero) for p in prompts if p
+        ] or ["a bright cheerful cartoon scene, soft cute 2D cartoon "
+              "illustration for toddlers, storybook style, no text"]
     if data.get("thumbnail_prompt"):
         data["thumbnail_prompt"] = _lock_hero_look(data["thumbnail_prompt"], hero)
     return data

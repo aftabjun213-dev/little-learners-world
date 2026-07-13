@@ -9,6 +9,7 @@ The daily robot. Runs once per day:
 """
 import datetime as dt
 import json
+import math
 import os
 import random
 import sys
@@ -18,7 +19,8 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import (OUTPUT_DIR, TIMEZONE, PUBLISH_HOUR, CHANNEL_NAME,
-                    VOICES, VOICE, WIDTH, HEIGHT, CROSSFADE)
+                    VOICES, VOICE, WIDTH, HEIGHT, CROSSFADE, IMAGE_SECONDS,
+                    IMAGES_PER_SCENE_MIN, IMAGES_PER_SCENE_MAX)
 from generate_script import generate_script, STRUCTURES
 from generate_audio import generate_audio, eleven_available
 from generate_images import generate_image
@@ -93,19 +95,28 @@ def main():
     scenes = script["scenes"]
     print(f"Title chosen: {script['video_title']}")
 
-    # 2/3. Per-scene audio (mood-paced) + image
+    # 2/3. Per-scene audio (mood-paced) + several quick-cut pictures
     media = []
     base_seed = random.randint(1, 1_000_000)
     for i, scene in enumerate(scenes):
-        print(f"Scene {i + 1}/{len(scenes)} "
-              f"[{scene.get('mood', 'curious')}]: voice + image...")
         audio_path = os.path.join(OUTPUT_DIR, f"scene_{i}.mp3")
-        image_path = os.path.join(OUTPUT_DIR, f"scene_{i}.png")
         generate_audio(scene["narration"], audio_path, voice=voice,
                        mood=scene.get("mood"))
-        generate_image(scene["image_prompt"], image_path, seed=base_seed + i)
+        dur = get_duration(audio_path)
+        # A new picture roughly every IMAGE_SECONDS so nothing feels static
+        k = max(IMAGES_PER_SCENE_MIN,
+                min(IMAGES_PER_SCENE_MAX, math.ceil(dur / IMAGE_SECONDS)))
+        prompts = scene.get("image_prompts") or ["a bright cheerful cartoon"]
+        print(f"Scene {i + 1}/{len(scenes)} [{scene.get('mood', 'curious')}]: "
+              f"{dur:.0f}s narration, {k} pictures...")
+        images = []
+        for j in range(k):
+            img_path = os.path.join(OUTPUT_DIR, f"scene_{i}_{j}.png")
+            generate_image(prompts[j % len(prompts)], img_path,
+                           seed=base_seed + i * 10 + j)
+            images.append(img_path)
         media.append({
-            "image": image_path,
+            "images": images,
             "audio": audio_path,
             "narration": scene["narration"],
         })
@@ -122,7 +133,7 @@ def main():
                 sparkle_path=sparkle_path)
 
     # 4b. Dedicated thumbnail (falls back to scene 1 if anything goes wrong)
-    thumbnail = media[0]["image"]
+    thumbnail = media[0]["images"][0]
     try:
         if script.get("thumbnail_prompt"):
             print("Making the thumbnail...")
