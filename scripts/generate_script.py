@@ -114,7 +114,7 @@ No trailing commas. Do not put line breaks inside a string value.
     {{
       "chapter_title": "2-4 word fun chapter name for this scene",
       "mood": "one of: excited, curious, gentle, silly, calm",
-      "narration": "The exact spoken words for this scene (about {SECONDS_PER_SCENE} seconds read aloud). Follow ALL retention rules.",
+      "narration": "The exact spoken words for this scene. STRICT LENGTH: 40 to 55 words - NEVER more than 60 words. Follow ALL retention rules.",
       "image_prompts": ["EXACTLY 3 short picture descriptions for this scene, showing the action PROGRESSING: (1) how the moment starts, (2) the middle of the action, (3) how it ends. Each is 1-2 sentences describing one bright, cute cartoon illustration. Keep the SAME characters looking consistent. Always include the style words: 'soft cute 2D cartoon illustration for toddlers, bright cheerful colors, simple rounded shapes, storybook style, no text'."]
     }}
   ]
@@ -122,9 +122,10 @@ No trailing commas. Do not put line breaks inside a string value.
 
 Make exactly {scene_count} scenes that flow as ONE continuous story following the
 "{struct_name}" structure, with a happy, satisfying ending that repeats the catchy
-lesson phrase one last time. Each narration is about {SECONDS_PER_SCENE} seconds
-read aloud. Vary the mood across scenes - excitement peaks, curious build-ups,
-one gentle beat, and a calm proud ending.
+lesson phrase one last time. NARRATION LENGTH IS A HARD RULE: every scene's
+narration must be 40-55 words (roughly {SECONDS_PER_SCENE} seconds spoken) so the
+whole video stays under 6 minutes. Vary the mood across scenes - excitement
+peaks, curious build-ups, one gentle beat, and a calm proud ending.
 """
 
 

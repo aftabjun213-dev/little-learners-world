@@ -27,7 +27,7 @@ def _pollinations(prompt, out_path, seed, retries, width, height):
     last_err = None
     for attempt in range(retries):
         try:
-            resp = requests.get(url, timeout=120)
+            resp = requests.get(url, timeout=90)
             if resp.status_code == 200 and \
                     resp.headers.get("Content-Type", "").startswith("image"):
                 with open(out_path, "wb") as f:
@@ -36,7 +36,7 @@ def _pollinations(prompt, out_path, seed, retries, width, height):
             last_err = f"status={resp.status_code}"
         except Exception as e:  # noqa: BLE001
             last_err = str(e)
-        time.sleep(8 * (attempt + 1))
+        time.sleep(4 * (attempt + 1))
     raise RuntimeError(f"Pollinations failed after {retries} tries: {last_err}")
 
 
@@ -67,6 +67,15 @@ def _replicate(prompt, out_path, seed, aspect_ratio, premium=False):
     return out_path
 
 
+# Run-level Flux health tracking. If Flux fails completely for 2 pictures in a
+# row (e.g. account throttled below $5 credit -> endless E9828/429), we stop
+# trying it for the REST of the run instead of burning minutes on doomed
+# retries for all ~36 pictures.
+_flux_failed_streak = 0
+_flux_disabled = False
+_flux_spacing = 0.0   # extra pause between calls once rate limiting is seen
+
+
 def generate_image(prompt, out_path, seed=0, retries=4,
                    width=None, height=None, aspect_ratio="16:9",
                    premium=False):
@@ -76,20 +85,37 @@ def generate_image(prompt, out_path, seed=0, retries=4,
     size and aspect_ratio='9:16' for Shorts. premium=True uses the top-quality
     Flux model (reserved for thumbnails - it costs ~10x more per image).
     """
+    global _flux_failed_streak, _flux_disabled, _flux_spacing
     width = width or WIDTH
     height = height or HEIGHT
-    if os.environ.get("REPLICATE_API_TOKEN"):
-        # Replicate throws occasional transient errors (e.g. E9828) that
-        # succeed on retry. Retrying keeps every scene in the SAME art style
-        # (hero consistency) and avoids the much slower Pollinations path.
+    if os.environ.get("REPLICATE_API_TOKEN") and not _flux_disabled:
         for attempt in range(3):
             try:
-                return _replicate(prompt, out_path, seed, aspect_ratio,
-                                  premium=premium)
+                if _flux_spacing:
+                    time.sleep(_flux_spacing)
+                result = _replicate(prompt, out_path, seed, aspect_ratio,
+                                    premium=premium)
+                _flux_failed_streak = 0
+                return result
             except Exception as e:  # noqa: BLE001
-                print(f"  Flux attempt {attempt + 1}/3 failed ({e})")
-                time.sleep(5 * (attempt + 1))
-        print("  Flux unavailable; falling back to Pollinations...")
+                msg = str(e)
+                if "429" in msg or "throttled" in msg.lower():
+                    # Low-credit accounts get 6 requests/min: space out calls
+                    _flux_spacing = 11.0
+                    print(f"  Flux rate-limited (attempt {attempt + 1}/3); "
+                          f"pacing to ~6 requests/min...")
+                    time.sleep(12)
+                else:
+                    print(f"  Flux attempt {attempt + 1}/3 failed "
+                          f"({msg[:110]})")
+                    time.sleep(5 * (attempt + 1))
+        _flux_failed_streak += 1
+        if _flux_failed_streak >= 2:
+            _flux_disabled = True
+            print("  Flux keeps failing - using Pollinations for the rest "
+                  "of this run (check Replicate credit is above $5).")
+        else:
+            print("  Flux unavailable; falling back to Pollinations...")
     return _pollinations(prompt, out_path, seed, retries, width, height)
 
 
