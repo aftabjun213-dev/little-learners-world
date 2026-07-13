@@ -72,10 +72,16 @@ def generate_image(prompt, out_path, seed=0, retries=4,
     width = width or WIDTH
     height = height or HEIGHT
     if os.environ.get("REPLICATE_API_TOKEN"):
-        try:
-            return _replicate(prompt, out_path, seed, aspect_ratio)
-        except Exception as e:  # noqa: BLE001
-            print(f"  Flux failed ({e}); falling back to Pollinations...")
+        # Replicate throws occasional transient errors (e.g. E9828) that
+        # succeed on retry. Retrying keeps every scene in the SAME art style
+        # (hero consistency) and avoids the much slower Pollinations path.
+        for attempt in range(3):
+            try:
+                return _replicate(prompt, out_path, seed, aspect_ratio)
+            except Exception as e:  # noqa: BLE001
+                print(f"  Flux attempt {attempt + 1}/3 failed ({e})")
+                time.sleep(5 * (attempt + 1))
+        print("  Flux unavailable; falling back to Pollinations...")
     return _pollinations(prompt, out_path, seed, retries, width, height)
 
 
