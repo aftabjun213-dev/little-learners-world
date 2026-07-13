@@ -185,7 +185,7 @@ def build_video(scenes, out_path, music_path=None, sparkle_path=None,
         "-filter_complex", filter_complex,
         "-map", f"[{last_v}]",
         "-map", f"[{final_a}]",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "superfast",
         "-c:a", "aac", "-b:a", "192k",
         "-movflags", "+faststart",
         # SAFETY: stop at the intended length no matter what the audio does.

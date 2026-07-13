@@ -12,7 +12,10 @@ permissions:
 jobs:
   make-and-upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 30      # safety: never let a stuck job burn hours of minutes
+    # Generous ceiling: HD encode + ElevenLabs voices + Flux images legitimately
+    # need ~35 min. Runaway length is impossible (video is hard-capped with -t),
+    # so this is only a backstop against a truly hung job.
+    timeout-minutes: 55
     steps:
       - name: Get the code
         uses: actions/checkout@v4
@@ -30,6 +33,7 @@ jobs:
 
       - name: Make and upload today's video
         env:
+          PYTHONUNBUFFERED: "1"   # show progress live in the log
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}

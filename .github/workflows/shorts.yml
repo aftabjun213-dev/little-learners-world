@@ -14,7 +14,7 @@ permissions:
 jobs:
   make-and-upload-shorts:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 55
     steps:
       - name: Get the code
         uses: actions/checkout@v4
@@ -32,6 +32,7 @@ jobs:
 
       - name: Make and upload two shorts
         env:
+          PYTHONUNBUFFERED: "1"   # show progress live in the log
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
