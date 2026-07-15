@@ -16,7 +16,7 @@ jobs:
     # Generous ceiling: HD encode + ElevenLabs voices + Flux images legitimately
     # need ~35 min. Runaway length is impossible (video is hard-capped with -t),
     # so this is only a backstop against a truly hung job.
-    timeout-minutes: 55
+    timeout-minutes: 70
     steps:
       - name: Get the code
         uses: actions/checkout@v4

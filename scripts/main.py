@@ -44,6 +44,18 @@ def load_json(path, default):
         return default
 
 
+def trim_narration(text, max_words=62):
+    """Keep whole sentences up to ~max_words. The script prompt asks for 40-55
+    words per scene but the model drifts long; unchecked, scenes hit 35+
+    seconds and push the video past 6 minutes."""
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    clipped = " ".join(words[:max_words])
+    best = max(clipped.rfind("."), clipped.rfind("!"), clipped.rfind("?"))
+    return clipped[:best + 1] if best > 40 else clipped + "..."
+
+
 def next_publish_time():
     """Return today's (or tomorrow's) PUBLISH_HOUR in the user's timezone, as UTC ISO."""
     tz = ZoneInfo(TIMEZONE)
@@ -99,6 +111,7 @@ def main():
     media = []
     base_seed = random.randint(1, 1_000_000)
     for i, scene in enumerate(scenes):
+        scene["narration"] = trim_narration(scene["narration"])
         audio_path = os.path.join(OUTPUT_DIR, f"scene_{i}.mp3")
         generate_audio(scene["narration"], audio_path, voice=voice,
                        mood=scene.get("mood"))

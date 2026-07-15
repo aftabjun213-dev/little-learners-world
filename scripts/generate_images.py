@@ -66,9 +66,9 @@ def _replicate(prompt, out_path, seed, aspect_ratio, premium=False,
 
     resp = requests.post(
         f"https://api.replicate.com/v1/models/{model}/predictions",
-        headers={**headers, "Prefer": "wait=60"},
+        headers={**headers, "Prefer": "wait=45"},
         json={"input": inputs},
-        timeout=90,
+        timeout=70,
     )
     if resp.status_code == 429:
         raise RuntimeError(f"429 throttled: {resp.text[:150]}")
@@ -80,7 +80,7 @@ def _replicate(prompt, out_path, seed, aspect_ratio, premium=False,
     # (a healthy flux image finishes in a couple of seconds).
     get_url = (pred.get("urls") or {}).get("get")
     waited = 0
-    while status in ("starting", "processing") and get_url and waited < 24:
+    while status in ("starting", "processing") and get_url and waited < 12:
         time.sleep(4)
         waited += 4
         pred = requests.get(get_url, headers=headers, timeout=30).json()
@@ -103,11 +103,16 @@ def _replicate(prompt, out_path, seed, aspect_ratio, premium=False,
     return out_path
 
 
-# Run-level Flux health tracking. If Flux fails completely for 2 pictures in a
-# row (e.g. account throttled below $5 credit -> endless E9828/429), we stop
-# trying it for the REST of the run instead of burning minutes on doomed
-# retries for all ~36 pictures.
+# Run-level Flux health tracking. Two independent tripwires:
+#  - streak: 2 pictures in a row failing completely (hard outage)
+#  - budget: 6 failed attempts TOTAL in one run (intermittent outage - some
+#    successes in between used to reset the streak and let a half-broken
+#    Replicate eat 1-2 minutes per failure all run long)
+# Either one disables Flux for the rest of the run; the fallback art keeps
+# the video shipping.
 _flux_failed_streak = 0
+_flux_total_failures = 0
+FLUX_FAILURE_BUDGET = 6
 _flux_disabled = False
 _flux_spacing = 0.0   # extra pause between calls once rate limiting is seen
 
@@ -121,15 +126,16 @@ def generate_image(prompt, out_path, seed=0, retries=4,
     size and aspect_ratio='9:16' for Shorts. premium=True uses the top-quality
     Flux model (reserved for thumbnails - it costs ~10x more per image).
     """
-    global _flux_failed_streak, _flux_disabled, _flux_spacing
+    global _flux_failed_streak, _flux_total_failures, _flux_disabled, \
+        _flux_spacing
     width = width or WIDTH
     height = height or HEIGHT
     if os.environ.get("REPLICATE_API_TOKEN") and not _flux_disabled:
-        for attempt in range(3):
+        for attempt in range(2):
             try:
                 if _flux_spacing:
                     time.sleep(_flux_spacing)
-                # Retries switch to the alternate pipeline (go_fast=False),
+                # The retry switches to the alternate pipeline (go_fast=False),
                 # which often dodges incidents on the fast lane.
                 result = _replicate(prompt, out_path, seed, aspect_ratio,
                                     premium=premium, go_fast=(attempt == 0))
@@ -137,23 +143,31 @@ def generate_image(prompt, out_path, seed=0, retries=4,
                 return result
             except Exception as e:  # noqa: BLE001
                 msg = str(e)
+                _flux_total_failures += 1
                 if "429" in msg or "throttled" in msg.lower():
                     # Low-credit accounts get 6 requests/min: space out calls
                     _flux_spacing = 11.0
-                    print(f"  Flux rate-limited (attempt {attempt + 1}/3); "
+                    print(f"  Flux rate-limited (attempt {attempt + 1}/2); "
                           f"pacing to ~6 requests/min...")
                     time.sleep(12)
                 else:
-                    print(f"  Flux attempt {attempt + 1}/3 failed "
+                    print(f"  Flux attempt {attempt + 1}/2 failed "
                           f"({msg[:110]})")
-                    time.sleep(5 * (attempt + 1))
-        _flux_failed_streak += 1
-        if _flux_failed_streak >= 2:
+                    time.sleep(4)
+                if _flux_total_failures >= FLUX_FAILURE_BUDGET:
+                    break
+        if _flux_total_failures >= FLUX_FAILURE_BUDGET:
             _flux_disabled = True
-            print("  Flux keeps failing - using Pollinations for the rest "
-                  "of this run (check Replicate credit is above $5).")
+            print(f"  Flux failed {_flux_total_failures} times this run - "
+                  "switching to Pollinations for the rest of the video.")
         else:
-            print("  Flux unavailable; falling back to Pollinations...")
+            _flux_failed_streak += 1
+            if _flux_failed_streak >= 2:
+                _flux_disabled = True
+                print("  Flux keeps failing - using Pollinations for the "
+                      "rest of this run.")
+            else:
+                print("  Flux unavailable; falling back to Pollinations...")
     return _pollinations(prompt, out_path, seed, retries, width, height)
 
 
