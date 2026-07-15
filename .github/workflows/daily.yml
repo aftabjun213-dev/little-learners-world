@@ -2,8 +2,9 @@ name: Daily Kids Video
 
 on:
   schedule:
-    # Runs every night at 02:00 UTC. (You can change this time.)
-    - cron: "0 2 * * *"
+    # 02:23 UTC nightly. Off-peak minute: GitHub's scheduler often skips or
+    # heavily delays jobs set at :00, which cost us a day's upload once.
+    - cron: "23 2 * * *"
   workflow_dispatch: {}   # lets you also run it manually with one click
 
 permissions:

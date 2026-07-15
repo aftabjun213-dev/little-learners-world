@@ -242,6 +242,9 @@ def generate_script(topic_title, concept, scene_count=SCENE_COUNT,
     data["tags"] = list(data["tags"]) + [
         "kids learning", "educational cartoon for kids", "toddler videos",
         "preschool", "learning for kids", CHANNEL_NAME.lower(),
+        # What our audience actually searches for (YouTube Trends, Jul 2026)
+        "kindergarten learning videos", "abc learning for toddlers",
+        "phonics sounds of alphabets",
     ]
     if hero:
         data["tags"].append(hero["name"].lower())
