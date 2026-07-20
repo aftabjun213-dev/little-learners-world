@@ -17,7 +17,7 @@ import edge_tts
 import requests
 
 from config import (VOICE, VOICE_RATE, MOOD_STYLES,
-                    ELEVEN_MODEL, ELEVEN_MOODS)
+                    ELEVEN_MODEL, ELEVEN_MOODS, ELEVEN_DEFAULT_MOOD)
 
 _voice_id_cache = None
 
@@ -58,7 +58,7 @@ def _eleven_voice_id(name):
 
 
 def _eleven_synth(text, out_path, voice_name, mood):
-    stability, style = ELEVEN_MOODS.get(mood, (0.45, 0.4))
+    stability, style, speed = ELEVEN_MOODS.get(mood, ELEVEN_DEFAULT_MOOD)
     voice_id = _eleven_voice_id(voice_name)
     r = requests.post(
         f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
@@ -71,6 +71,7 @@ def _eleven_synth(text, out_path, voice_name, mood):
                 "stability": stability,
                 "similarity_boost": 0.75,
                 "style": style,
+                "speed": speed,
                 "use_speaker_boost": True,
             },
         },

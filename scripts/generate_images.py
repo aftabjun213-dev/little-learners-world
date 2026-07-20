@@ -117,6 +117,28 @@ _flux_disabled = False
 _flux_spacing = 0.0   # extra pause between calls once rate limiting is seen
 
 
+def _emergency_card(out_path, seed, width, height):
+    """Absolute last resort if EVERY image service is down: a soft, cheerful
+    color card (pastel + bokeh). The narration, subtitles and music still
+    carry the scene - and the video ships instead of the whole run dying."""
+    import random as _random
+    from PIL import Image, ImageDraw, ImageFilter
+
+    rnd = _random.Random(seed)
+    palettes = [(255, 205, 178), (181, 234, 215), (255, 236, 179),
+                (179, 220, 237), (230, 200, 240), (255, 183, 197)]
+    img = Image.new("RGB", (width, height), palettes[seed % len(palettes)])
+    draw = ImageDraw.Draw(img, "RGBA")
+    for _ in range(18):
+        r = rnd.randint(40, 160)
+        x, y = rnd.randint(0, width), rnd.randint(0, height)
+        draw.ellipse([x - r, y - r, x + r, y + r],
+                     fill=(255, 255, 255, rnd.randint(30, 90)))
+    img = img.filter(ImageFilter.GaussianBlur(6))
+    img.save(out_path)
+    return out_path
+
+
 def generate_image(prompt, out_path, seed=0, retries=4,
                    width=None, height=None, aspect_ratio="16:9",
                    premium=False):
@@ -168,7 +190,12 @@ def generate_image(prompt, out_path, seed=0, retries=4,
                       "rest of this run.")
             else:
                 print("  Flux unavailable; falling back to Pollinations...")
-    return _pollinations(prompt, out_path, seed, retries, width, height)
+    try:
+        return _pollinations(prompt, out_path, seed, retries, width, height)
+    except Exception as e:  # noqa: BLE001
+        print(f"  All image services down ({e}); using a color card so "
+              "the video still ships.")
+        return _emergency_card(out_path, seed, width, height)
 
 
 if __name__ == "__main__":

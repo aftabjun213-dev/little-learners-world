@@ -10,6 +10,12 @@ on:
 permissions:
   contents: write          # needed to save progress (state.json) back to the repo
 
+# Never run two video builds at once (a late-firing schedule + a manual run
+# would both build the same episode). Extra runs wait their turn instead.
+concurrency:
+  group: daily-video
+  cancel-in-progress: false
+
 jobs:
   make-and-upload:
     runs-on: ubuntu-latest

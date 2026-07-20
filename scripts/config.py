@@ -44,15 +44,17 @@ MOOD_STYLES = {
 # char) so your monthly credits cover roughly 2x more videos. For maximum
 # richness on a bigger plan, set ELEVEN_MODEL to "eleven_multilingual_v2".
 ELEVEN_MODEL = os.environ.get("ELEVEN_MODEL") or "eleven_flash_v2_5"
-# Per-scene mood -> (stability, style). Lower stability + higher style = more
-# emotion/energy; higher stability + low style = calmer, steadier.
+# Per-scene mood -> (stability, style, speed). Lower stability + higher style
+# = more emotion/energy. Speed < 1.0 slows delivery - little kids need a
+# gentler pace to follow along (1.0 was too fast).
 ELEVEN_MOODS = {
-    "excited": (0.30, 0.65),
-    "curious": (0.40, 0.45),
-    "gentle":  (0.55, 0.30),
-    "silly":   (0.28, 0.75),
-    "calm":    (0.62, 0.20),
+    "excited": (0.30, 0.65, 0.93),
+    "curious": (0.40, 0.45, 0.90),
+    "gentle":  (0.55, 0.30, 0.86),
+    "silly":   (0.28, 0.75, 0.93),
+    "calm":    (0.62, 0.20, 0.84),
 }
+ELEVEN_DEFAULT_MOOD = (0.45, 0.40, 0.90)
 
 # ----- Video look -----
 WIDTH = 1920           # Full HD width (1080p)
